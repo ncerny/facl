@@ -20,14 +20,14 @@ resource_name 'facl'
 
 property :path, String, name_property: true
 # property :rules, String
-property :user, [String, Hash, Array]
-property :group, [String, Hash, Array]
-property :mask, [String, Hash, Array]
-property :other, [String, Hash, Array]
-property :default, [String, Hash, Array]
-property :recurse, [true, false], default: false
+property :user, [String, Hash, Array], default: {}
+property :group, [String, Hash, Array], default: {}
+property :mask, [String, Hash, Array], default: {}
+property :other, [String, Hash, Array], default: {}
+property :default, [String, Hash, Array], default: {}
+# property :recurse, [true, false], default: false
 
-attr_reader :facl
+attr_accessor :facl
 
 # facl '/share' do
 #   user tommy: 'rwx',
@@ -50,33 +50,40 @@ load_current_value do
 end
 
 action :set do
-  @facl ||= {}
-  @facl[:user] = new_resource.user
-  @facl[:group] = new_resource.group
-  @facl[:other] = new_resource.other
-  @facl[:mask] = new_resource.mask
-  @facl[:default] = new_resource.default # ~FC001 ~FC039
+  raise "Cannot set ACL because File #{new_resource.path} does not exist!" unless ::File.exist?(new_resource.path)
+
+  new_resource.facl = {
+    user: new_resource.user,
+    group: new_resource.group,
+    other: new_resource.other,
+    mask: new_resource.mask,
+    default: new_resource.default,
+  }
+
+  p 'Current Resource:'
+  p current_resource.facl
+  p 'New Resrouce:'
+  p new_resource.facl
 
   changes_required = diff(current_resource.facl, new_resource.facl)
+  p "Changes Required: #{changes_required}"
   default = changes_required.delete(:default)
+  # flags = (new_resource.recurse ? 'R' : '')
   changes_required.each do |inst, obj|
-    obj.each do |_, value|
-      setfacl(new_resource.path, inst, obj, value)
+    obj.each do |key, value|
+      converge_by("Setting ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
+        setfacl(new_resource.path, inst, key, value)
+      end
     end
-  end
-  default.each do |_, inst|
-    inst.each do |obj, value|
-      setfacl(new_resource.path, inst, obj, value, '-d')
+  end if changes_required
+  default.each do |inst, obj|
+    obj.each do |key, value|
+      raise 'Default ACL only valid on Directories!' unless ::File.directory?(new_resource.path)
+      converge_by("Setting Default Directory ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
+        setfacl(new_resource.path, inst, key, value, '-d')
+      end
     end
-  end
-end
-
-action :modify do
-
-end
-
-action :remove do
-
+  end if default
 end
 
 def facl_to_hash(string)
@@ -117,6 +124,6 @@ end
 def setfacl(path, inst, obj, value, flags = '')
   op = (value.eql?(:remove) ? '-x' : '-m')
   cmd = Mixlib::ShellOut.new("setfacl #{flags} #{op} #{inst}:#{obj}:#{value} #{path}")
-  cmd.run_action
+  cmd.run_command
   cmd.error!
 end
