@@ -25,7 +25,7 @@ property :group, [String, Hash, Array], default: {}
 property :mask, [String, Hash, Array], default: {}
 property :other, [String, Hash, Array], default: {}
 property :default, [String, Hash, Array], default: {}
-# property :recurse, [true, false], default: false
+property :recurse, [true, false], default: false
 
 attr_accessor :facl
 
@@ -60,19 +60,24 @@ action :set do
     default: new_resource.default,
   }
 
+  recurse = new_resource.recurse
+
   p 'Current Resource:'
   p current_resource.facl
-  p 'New Resrouce:'
+  p 'New Resource:'
   p new_resource.facl
 
   changes_required = diff(current_resource.facl, new_resource.facl)
   p "Changes Required: #{changes_required}"
   default = changes_required.delete(:default)
-  # flags = (new_resource.recurse ? 'R' : '')
   changes_required.each do |inst, obj|
     obj.each do |key, value|
-      converge_by("Setting ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
-        setfacl(new_resource.path, inst, key, value)
+      if recurse and ::File.directory?(new_resource.path)
+        setfacl(new_resource.path, inst, key, value, flags='-R')
+      else
+        converge_by("Setting ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
+          setfacl(new_resource.path, inst, key, value)
+        end
       end
     end
   end if changes_required

@@ -1,0 +1,32 @@
+---
+driver:
+  name: docker
+
+provisioner:
+  name: chef_zero
+  log_level: debug
+
+verifier:
+  name: inspec
+
+platforms:
+  - name: centos
+    driver_config:
+      privileged: true
+      image: centos/systemd
+      platform: centos
+      volume:
+        - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      provision_command:
+        - echo "root:password" | chpasswd
+        - sed -i 's/Defaults   requiretty/#Defaults   requiretty/g' /etc/sudoers
+          #- yum install -y initscripts logrotate net-tools vim
+
+suites:
+  - name: default
+    run_list:
+      - recipe[facl_test::default]
+    verifier:
+      inspec_tests:
+        - test/smoke/default
+    attributes:
