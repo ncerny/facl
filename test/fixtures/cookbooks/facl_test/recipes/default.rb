@@ -28,3 +28,16 @@ facl '/tmp/facl_test_dir' do
   other :'' => 'r'
   # default 'user:test_user:rw'
 end
+
+['/tmp/test','/tmp/test/recursion','/tmp/test/recursion/for','/tmp/test/recursion/for/module'].each do |k|
+  directory k
+end
+
+facl '/tmp/test' do
+  user :'' => 'rw',
+       test_user: 'rwx'
+  group :'' => 'rw'
+  mask :'' => 'rwx'
+  other :'' => 'r'
+  recurse true
+end
