@@ -9,8 +9,8 @@ version '0.1.0'
 
 chef_version '>= 12.1' if respond_to?(:chef_version)
 
-issues_url 'https://github.com/cerny-cc/facl/issues' if respond_to?(:issues_url)
-source_url 'https://github.com/cerny-cc/facl' if respond_to?(:source_url)
+issues_url 'https://github.com/ncerny/facl/issues' if respond_to?(:issues_url)
+source_url 'https://github.com/ncerny/facl' if respond_to?(:source_url)
 
 supports 'redhat'
 supports 'centos'
