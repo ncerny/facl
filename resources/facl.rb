@@ -69,6 +69,10 @@ action :set do
   Chef::Log.debug("New facl: #{new_resource.facl}")
 
   changes_required = diff_facl(current_resource.facl, new_resource.facl)
+  # Don't try to remove parts of the base ACL, it cannot be removed.
+  [:user, :group, :other, :mask].each do |symbol|
+    changes_required[symbol].delete_if { |key,value| key.eql?(:'') and value.eql?(:remove) } if changes_required[symbol]
+  end
   Chef::Log.debug("Changes Required: #{changes_required}")
   default = changes_required.delete(:default)
   changes_required.each do |inst, obj|
