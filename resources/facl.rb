@@ -132,8 +132,11 @@ def diff_facl(cur_r, new_r)
 end
 
 def setfacl(path, inst, obj, value, flags = '')
-  op = (value.eql?(:remove) ? '-x' : '-m')
-  cmd = Mixlib::ShellOut.new("setfacl #{flags} #{op} #{inst}:#{obj}:#{value} #{path}")
+  if value.eql?(:remove)
+    cmd = Mixlib::ShellOut.new("setfacl #{flags} -x #{inst}:#{obj} #{path}")
+  else
+    cmd = Mixlib::ShellOut.new("setfacl #{flags} -m #{inst}:#{obj}:#{value} #{path}")
+  end
   cmd.run_command
   cmd.error!
 end
