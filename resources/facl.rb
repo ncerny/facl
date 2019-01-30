@@ -89,7 +89,7 @@ action :set do
   default.each do |inst, obj|
     obj.each do |key, value|
       raise 'Default ACL only valid on Directories!' unless ::File.directory?(new_resource.path)
-      converge_by("Setting Default Directory ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
+      converge_by("Setting Default ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
         setfacl(new_resource.path, inst, key, value, '-d')
       end
     end
