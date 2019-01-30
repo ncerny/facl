@@ -67,7 +67,7 @@ action :set do
   p 'New Resource:'
   p new_resource.facl
 
-  changes_required = diff(current_resource.facl, new_resource.facl)
+  changes_required = diff_facl(current_resource.facl, new_resource.facl)
   p "Changes Required: #{changes_required}"
   default = changes_required.delete(:default)
   changes_required.each do |inst, obj|
@@ -108,7 +108,7 @@ def facl_to_hash(string)
   facl
 end
 
-def diff(cur_r, new_r)
+def diff_facl(cur_r, new_r)
   diff = {}
   (cur_r.keys - new_r.keys).each do |k|
     diff[k] = :remove
@@ -120,7 +120,7 @@ def diff(cur_r, new_r)
 
   (new_r.keys & cur_r.keys).each do |k|
     next if cur_r[k].eql?(new_r[k])
-    diff[k] = (cur_r[k].is_a?(Hash) ? diff(cur_r[k], new_r[k]) : new_r[k])
+    diff[k] = (cur_r[k].is_a?(Hash) ? diff_facl(cur_r[k], new_r[k]) : new_r[k])
   end
 
   diff
