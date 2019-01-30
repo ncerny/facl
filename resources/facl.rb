@@ -52,10 +52,10 @@ action :set do
   raise "Cannot set ACL because File #{new_resource.path} does not exist!" unless ::File.exist?(new_resource.path)
 
   new_resource.facl = {
-    user: new_resource.user,
-    group: new_resource.group,
-    other: new_resource.other,
-    mask: new_resource.mask,
+    user: new_resource.user.is_a?(String) ? {:'' => new_resource.user} : new_resource.user,
+    group: new_resource.group.is_a?(String) ? {:'' => new_resource.group} : new_resource.group,
+    other: new_resource.other.is_a?(String) ? {:'' => new_resource.other} : new_resource.other,
+    mask: new_resource.mask.is_a?(String) ? {:'' => new_resource.mask} : new_resource.mask,
     default: new_resource.default,
   }
 
