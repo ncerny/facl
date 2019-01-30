@@ -2,7 +2,7 @@
 # Cookbook:: facl
 # Resource:: facl
 #
-# Copyright:: 2017, Nathan Cerny
+# Copyright:: 2017-2019, Nathan Cerny, James Hewitt-Thomas
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
