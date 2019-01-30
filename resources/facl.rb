@@ -58,6 +58,10 @@ action :set do
     mask: new_resource.mask.is_a?(String) ? {:'' => new_resource.mask} : new_resource.mask,
     default: new_resource.default,
   }
+  # If there are no default acl entries for things, specify blank hashes so diff_facl works
+  [:user, :group, :other, :mask].each do |symbol|
+    new_resource.facl[:default][symbol] = {} unless new_resource.facl[:default].key?(symbol)
+  end
 
   recurse = new_resource.recurse
 
