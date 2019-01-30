@@ -1,6 +1,6 @@
 #
 # Cookbook:: facl
-# Resource:: facle
+# Resource:: facl
 #
 # Copyright:: 2017, Nathan Cerny
 #
