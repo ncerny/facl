@@ -19,12 +19,11 @@
 resource_name 'facl'
 
 property :path, String, name_property: true
-# property :rules, String
-property :user, [String, Hash, Array], default: {}
-property :group, [String, Hash, Array], default: {}
-property :mask, [String, Hash, Array], default: {}
-property :other, [String, Hash, Array], default: {}
-property :default, [String, Hash, Array], default: {}
+property :user, [String, Hash], default: {}
+property :group, [String, Hash], default: {}
+property :mask, [String, Hash], default: {}
+property :other, [String, Hash], default: {}
+property :default, [Hash], default: {}
 property :recurse, [true, false], default: false
 
 attr_accessor :facl
