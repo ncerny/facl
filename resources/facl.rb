@@ -35,7 +35,7 @@ attr_accessor :facl
 #   rules 'user:tommy:rwx'
 
 load_current_value do
-  cmd = Mixlib::ShellOut.new("getfacl #{path}")
+  cmd = Mixlib::ShellOut.new("getfacl --no-effective #{path}")
   cmd.run_command
   current_value_does_not_exist! if cmd.error!
   @facl = facl_to_hash(cmd.stdout)
