@@ -26,7 +26,7 @@ facl '/tmp/facl_test_dir' do
   group :'' => 'rw'
   mask :'' => 'rwx'
   other :'' => 'r'
-  # default 'user:test_user:rw'
+  default :user => { test_user: 'rwx' }
 end
 
 ['/tmp/test','/tmp/test/recursion','/tmp/test/recursion/for','/tmp/test/recursion/for/module'].each do |k|
