@@ -65,13 +65,11 @@ action :set do
 
   recurse = new_resource.recurse
 
-  p 'Current Resource:'
-  p current_resource.facl
-  p 'New Resource:'
-  p new_resource.facl
+  Chef::Log.debug("Current facl: #{current_resource.facl}")
+  Chef::Log.debug("New facl: #{new_resource.facl}")
 
   changes_required = diff_facl(current_resource.facl, new_resource.facl)
-  p "Changes Required: #{changes_required}"
+  Chef::Log.debug("Changes Required: #{changes_required}")
   default = changes_required.delete(:default)
   changes_required.each do |inst, obj|
     obj.each do |key, value|
