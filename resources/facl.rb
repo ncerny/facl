@@ -28,12 +28,6 @@ property :recurse, [true, false], default: false
 
 attr_accessor :facl
 
-# facl '/share' do
-#   user tommy: 'rwx',
-#        freddie: 'rw',
-#   user 'tommy:rwx'
-#   rules 'user:tommy:rwx'
-
 load_current_value do
   cmd = Mixlib::ShellOut.new("getfacl --no-effective #{path}")
   cmd.run_command
