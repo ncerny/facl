@@ -1,8 +1,8 @@
 #
 # Cookbook:: facl
-# Resource:: facle
+# Resource:: facl
 #
-# Copyright:: 2017, Nathan Cerny
+# Copyright:: 2017-2019, Nathan Cerny, James Hewitt-Thomas
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,24 +19,17 @@
 resource_name 'facl'
 
 property :path, String, name_property: true
-# property :rules, String
-property :user, [String, Hash, Array], default: {}
-property :group, [String, Hash, Array], default: {}
-property :mask, [String, Hash, Array], default: {}
-property :other, [String, Hash, Array], default: {}
-property :default, [String, Hash, Array], default: {}
+property :user, [String, Hash], default: {}
+property :group, [String, Hash], default: {}
+property :mask, [String, Hash], default: {}
+property :other, [String, Hash], default: {}
+property :default, [Hash], default: {}
 property :recurse, [true, false], default: false
 
 attr_accessor :facl
 
-# facl '/share' do
-#   user tommy: 'rwx',
-#        freddie: 'rw',
-#   user 'tommy:rwx'
-#   rules 'user:tommy:rwx'
-
 load_current_value do
-  cmd = Mixlib::ShellOut.new("getfacl #{path}")
+  cmd = Mixlib::ShellOut.new("getfacl --no-effective #{path}")
   cmd.run_command
   current_value_does_not_exist! if cmd.error!
   @facl = facl_to_hash(cmd.stdout)
@@ -53,22 +46,28 @@ action :set do
   raise "Cannot set ACL because File #{new_resource.path} does not exist!" unless ::File.exist?(new_resource.path)
 
   new_resource.facl = {
-    user: new_resource.user,
-    group: new_resource.group,
-    other: new_resource.other,
-    mask: new_resource.mask,
+    user: new_resource.user.is_a?(String) ? {:'' => new_resource.user} : new_resource.user,
+    group: new_resource.group.is_a?(String) ? {:'' => new_resource.group} : new_resource.group,
+    other: new_resource.other.is_a?(String) ? {:'' => new_resource.other} : new_resource.other,
+    mask: new_resource.mask.is_a?(String) ? {:'' => new_resource.mask} : new_resource.mask,
     default: new_resource.default,
   }
+  # If there are no default acl entries for things, specify blank hashes so diff_facl works
+  [:user, :group, :other, :mask].each do |symbol|
+    new_resource.facl[:default][symbol] = {} unless new_resource.facl[:default].key?(symbol)
+  end
 
   recurse = new_resource.recurse
 
-  p 'Current Resource:'
-  p current_resource.facl
-  p 'New Resource:'
-  p new_resource.facl
+  Chef::Log.debug("Current facl: #{current_resource.facl}")
+  Chef::Log.debug("New facl: #{new_resource.facl}")
 
-  changes_required = diff(current_resource.facl, new_resource.facl)
-  p "Changes Required: #{changes_required}"
+  changes_required = diff_facl(current_resource.facl, new_resource.facl)
+  # Don't try to remove parts of the base ACL, it cannot be removed.
+  [:user, :group, :other, :mask].each do |symbol|
+    changes_required[symbol].delete_if { |key,value| key.eql?(:'') and value.eql?(:remove) } if changes_required[symbol]
+  end
+  Chef::Log.debug("Changes Required: #{changes_required}")
   default = changes_required.delete(:default)
   changes_required.each do |inst, obj|
     obj.each do |key, value|
@@ -84,7 +83,7 @@ action :set do
   default.each do |inst, obj|
     obj.each do |key, value|
       raise 'Default ACL only valid on Directories!' unless ::File.directory?(new_resource.path)
-      converge_by("Setting Default Directory ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
+      converge_by("Setting Default ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
         setfacl(new_resource.path, inst, key, value, '-d')
       end
     end
@@ -108,7 +107,7 @@ def facl_to_hash(string)
   facl
 end
 
-def diff(cur_r, new_r)
+def diff_facl(cur_r, new_r)
   diff = {}
   (cur_r.keys - new_r.keys).each do |k|
     diff[k] = :remove
@@ -120,15 +119,18 @@ def diff(cur_r, new_r)
 
   (new_r.keys & cur_r.keys).each do |k|
     next if cur_r[k].eql?(new_r[k])
-    diff[k] = (cur_r[k].is_a?(Hash) ? diff(cur_r[k], new_r[k]) : new_r[k])
+    diff[k] = (cur_r[k].is_a?(Hash) ? diff_facl(cur_r[k], new_r[k]) : new_r[k])
   end
 
   diff
 end
 
 def setfacl(path, inst, obj, value, flags = '')
-  op = (value.eql?(:remove) ? '-x' : '-m')
-  cmd = Mixlib::ShellOut.new("setfacl #{flags} #{op} #{inst}:#{obj}:#{value} #{path}")
+  if value.eql?(:remove)
+    cmd = Mixlib::ShellOut.new("setfacl #{flags} -x #{inst}:#{obj} #{path}")
+  else
+    cmd = Mixlib::ShellOut.new("setfacl #{flags} -m #{inst}:#{obj}:#{value} #{path}")
+  end
   cmd.run_command
   cmd.error!
 end
