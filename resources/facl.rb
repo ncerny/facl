@@ -45,13 +45,13 @@ end
 action :set do
   raise "Cannot set ACL because File #{new_resource.path} does not exist!" unless ::File.exist?(new_resource.path)
 
-  new_resource.facl = {
-    user: new_resource.user.is_a?(String) ? {:'' => new_resource.user} : new_resource.user,
-    group: new_resource.group.is_a?(String) ? {:'' => new_resource.group} : new_resource.group,
-    other: new_resource.other.is_a?(String) ? {:'' => new_resource.other} : new_resource.other,
-    mask: new_resource.mask.is_a?(String) ? {:'' => new_resource.mask} : new_resource.mask,
+  new_resource.facl = ::Mash.new(
+    user: new_resource.user.is_a?(String) ? {'' => new_resource.user} : new_resource.user,
+    group: new_resource.group.is_a?(String) ? {'' => new_resource.group} : new_resource.group,
+    other: new_resource.other.is_a?(String) ? {'' => new_resource.other} : new_resource.other,
+    mask: new_resource.mask.is_a?(String) ? {'' => new_resource.mask} : new_resource.mask,
     default: new_resource.default,
-  }
+  )
   # If there are no default acl entries for things, specify blank hashes so diff_facl works
   [:user, :group, :other, :mask].each do |symbol|
     new_resource.facl[:default][symbol] = {} unless new_resource.facl[:default].key?(symbol)
@@ -65,7 +65,7 @@ action :set do
   changes_required = diff_facl(current_resource.facl, new_resource.facl)
   # Don't try to remove parts of the base ACL, it cannot be removed.
   [:user, :group, :other, :mask].each do |symbol|
-    changes_required[symbol].delete_if { |key,value| key.eql?(:'') and value.eql?(:remove) } if changes_required[symbol]
+    changes_required[symbol].delete_if { |key,value| key.eql?('') and value.eql?(:remove) } if changes_required[symbol]
   end
   Chef::Log.debug("Changes Required: #{changes_required}")
   default = changes_required.delete(:default)
@@ -91,7 +91,7 @@ action :set do
 end
 
 def facl_to_hash(string)
-  facl = { default: {}, user: {}, group: {}, mask: {}, other: {} }
+  facl = ::Mash.new(default: {}, user: {}, group: {}, mask: {}, other: {})
   string.each_line do |line|
     next unless line =~ /^(default|user|group|mask|other):/
     l = line.split(':')
@@ -108,7 +108,7 @@ def facl_to_hash(string)
 end
 
 def diff_facl(cur_r, new_r)
-  diff = {}
+  diff = ::Mash.new
   (cur_r.keys - new_r.keys).each do |k|
     diff[k] = :remove
   end
