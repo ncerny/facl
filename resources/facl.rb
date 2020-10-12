@@ -53,8 +53,12 @@ action :set do
     default: new_resource.default,
   }
   # If there are no default acl entries for things, specify blank hashes so diff_facl works
-  [:user, :group, :other, :mask].each do |symbol|
-    new_resource.facl[:default][symbol] = {} unless new_resource.facl[:default].key?(symbol)
+  # If path is a file, then no defaults should be given, if defaults are given, even empty ones
+  #   then error will be thrown below
+  if ::File.directory?(new_resource.path)
+    [:user, :group, :other, :mask].each do |symbol|
+      new_resource.facl[:default][symbol] = {} unless new_resource.facl[:default].key?(symbol)
+    end
   end
 
   recurse = new_resource.recurse
