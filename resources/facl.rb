@@ -16,7 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource_name 'facl'
+resource_name :facl
+provides :facl
 
 property :path, String, name_property: true
 property :user, [String, Hash], default: {}
