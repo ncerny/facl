@@ -9,10 +9,10 @@ Cookbook used to setup POSIX filesystem ACL's on Linux.
 include_recipe 'facl'
 
 facl '/tmp/facl_test' do
-  user  :'' => 'rw', test_user: 'rwx'
-  group :'' => 'rw'
+  user  :'' => 'rw-', test_user: 'rwx'
+  group :'' => 'rw-'
   mask  :'' => 'rwx'
-  other :'' => 'r'
+  other :'' => 'r--'
 end
 ```
 
@@ -21,10 +21,10 @@ end
 include_recipe 'facl'
 
 facl '/tmp/facl_test_dir' do
-  user  :'' => 'rw', test_user: 'rwx'
-  group :'' => 'rw'
+  user  :'' => 'rw-', test_user: 'rwx'
+  group :'' => 'rw-'
   mask  :'' => 'rwx'
-  other :'' => 'r'
+  other :'' => 'r--'
 end
 ```
 
@@ -33,14 +33,14 @@ end
 include_recipe 'facl'
 
 facl '/tmp/facl_test_dir' do
-  user    :'' => 'rw', test_user: 'rwx'
-  group   :'' => 'rw'
+  user    :'' => 'rw-', test_user: 'rwx'
+  group   :'' => 'rw-'
   mask    :'' => 'rwx'
-  other   :'' => 'r'
-  default :user => { :'' => 'rw', test_user: 'rwx'}
-          :group => { :'' => 'rw' }
+  other   :'' => 'r--'
+  default :user => { :'' => 'rw-', test_user: 'rwx'}
+          :group => { :'' => 'rw-' }
           :mask => { :'' => 'rwx' }
-          :other => { :'' => 'r' }
+          :other => { :'' => 'r--' }
 end
 ```
 
@@ -53,10 +53,10 @@ include_recipe 'facl'
 end
 
 facl '/tmp/test' do
-  user  :'' => 'rw', test_user: 'rwx'
-  group :'' => 'rw'
+  user  :'' => 'rw-', test_user: 'rwx'
+  group :'' => 'rw-'
   mask  :'' => 'rwx'
-  other :'' => 'r'
+  other :'' => 'r--'
   recurse true
 end
 ```

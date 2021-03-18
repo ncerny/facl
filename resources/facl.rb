@@ -69,7 +69,9 @@ action :set do
   changes_required.each do |inst, obj|
     obj.each do |key, value|
       if recurse && ::File.directory?(new_resource.path)
-        setfacl(new_resource.path, inst, key, value, '-R')
+        converge_by("Setting ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
+          setfacl(new_resource.path, inst, key, value, '-R')
+        end
       else
         converge_by("Setting ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
           setfacl(new_resource.path, inst, key, value)
@@ -78,7 +80,9 @@ action :set do
     end
   end if changes_required
   default.each do |inst, obj|
+    next if obj.is_a?(Symbol)
     obj.each do |key, value|
+      next if value.is_a?(Symbol)
       raise 'Default ACL only valid on Directories!' unless ::File.directory?(new_resource.path)
       converge_by("Setting Default ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
         setfacl(new_resource.path, inst, key, value, '-d')
