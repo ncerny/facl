@@ -16,14 +16,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource_name 'facl'
+resource_name :facl
+provides :facl
 
 property :path, String, name_property: true
 property :user, [String, Hash], default: {}
 property :group, [String, Hash], default: {}
 property :mask, [String, Hash], default: {}
 property :other, [String, Hash], default: {}
-property :default, [Hash], default: {}
+property :default, [Hash], default: { user: {}, group: {}, other: {}, mask: {} }
 property :recurse, [true, false], default: false
 
 attr_accessor :facl
@@ -39,23 +40,19 @@ load_current_value do
   group facl[:group]
   mask facl[:mask]
   other facl[:other]
-  default facl[:default] # ~FC001 ~FC039
+  default facl[:default]
 end
 
 action :set do
   raise "Cannot set ACL because File #{new_resource.path} does not exist!" unless ::File.exist?(new_resource.path)
 
   new_resource.facl = {
-    user: new_resource.user.is_a?(String) ? {:'' => new_resource.user} : new_resource.user,
-    group: new_resource.group.is_a?(String) ? {:'' => new_resource.group} : new_resource.group,
-    other: new_resource.other.is_a?(String) ? {:'' => new_resource.other} : new_resource.other,
-    mask: new_resource.mask.is_a?(String) ? {:'' => new_resource.mask} : new_resource.mask,
+    user: new_resource.user.is_a?(String) ? { '': new_resource.user } : new_resource.user,
+    group: new_resource.group.is_a?(String) ? { '': new_resource.group } : new_resource.group,
+    other: new_resource.other.is_a?(String) ? { '': new_resource.other } : new_resource.other,
+    mask: new_resource.mask.is_a?(String) ? { '': new_resource.mask } : new_resource.mask,
     default: new_resource.default,
   }
-  # If there are no default acl entries for things, specify blank hashes so diff_facl works
-  [:user, :group, :other, :mask].each do |symbol|
-    new_resource.facl[:default][symbol] = {} unless new_resource.facl[:default].key?(symbol)
-  end
 
   recurse = new_resource.recurse
 
@@ -65,14 +62,16 @@ action :set do
   changes_required = diff_facl(current_resource.facl, new_resource.facl)
   # Don't try to remove parts of the base ACL, it cannot be removed.
   [:user, :group, :other, :mask].each do |symbol|
-    changes_required[symbol].delete_if { |key,value| key.eql?(:'') and value.eql?(:remove) } if changes_required[symbol]
+    changes_required[symbol].delete_if { |key, value| key.eql?(:'') and value.eql?(:remove) } if changes_required[symbol]
   end
   Chef::Log.debug("Changes Required: #{changes_required}")
   default = changes_required.delete(:default)
   changes_required.each do |inst, obj|
     obj.each do |key, value|
-      if recurse and ::File.directory?(new_resource.path)
-        setfacl(new_resource.path, inst, key, value, flags='-R')
+      if recurse && ::File.directory?(new_resource.path)
+        converge_by("Setting ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
+          setfacl(new_resource.path, inst, key, value, '-R')
+        end
       else
         converge_by("Setting ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
           setfacl(new_resource.path, inst, key, value)
@@ -81,7 +80,9 @@ action :set do
     end
   end if changes_required
   default.each do |inst, obj|
+    next if obj.is_a?(Symbol)
     obj.each do |key, value|
+      next if value.is_a?(Symbol)
       raise 'Default ACL only valid on Directories!' unless ::File.directory?(new_resource.path)
       converge_by("Setting Default ACL (#{inst}:#{key}:#{value}) on #{new_resource.path}") do
         setfacl(new_resource.path, inst, key, value, '-d')
@@ -126,11 +127,11 @@ def diff_facl(cur_r, new_r)
 end
 
 def setfacl(path, inst, obj, value, flags = '')
-  if value.eql?(:remove)
-    cmd = Mixlib::ShellOut.new("setfacl #{flags} -x #{inst}:#{obj} #{path}")
-  else
-    cmd = Mixlib::ShellOut.new("setfacl #{flags} -m #{inst}:#{obj}:#{value} #{path}")
-  end
+  cmd = if value.eql?(:remove)
+          Mixlib::ShellOut.new("setfacl #{flags} -x #{inst}:#{obj} #{path}")
+        else
+          Mixlib::ShellOut.new("setfacl #{flags} -m #{inst}:#{obj}:#{value} #{path}")
+        end
   cmd.run_command
   cmd.error!
 end
